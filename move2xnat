@@ -1,0 +1,101 @@
+#!/bin/bash
+function helpme()
+{
+echo "USAGE: move2xnat -datadir=<path_to_subjects> -studyname=<your_study_name>"
+echo 
+echo "This will move your dicoms and recon-all output to"
+echo "xnat and replace the data current directories with "
+echo "symlinks to the data :)"
+echo
+echo "Please ensure that <path_to_subjects> contains a"
+echo "directory called dicoms as well as the recon-all"
+echo "generated output directories"
+echo
+echo "Written by John Salvatore -- jsalva@mit.edu"
+exit 0
+}
+
+function main()
+{
+
+xnatsurfdir="/mindhive/xnat/surfaces/${studyname}"
+xnatdicomdir="/mindhive/xnat/dicom_storage/${studyname}"
+for d in $(find ${datadir} -maxdepth 1 -type d |sed "s|${datadir}\/||g"); do 
+	echo $d
+
+	
+	if [ ! -d "${xnatdicomdir}/$d" ];then
+		cmd="mkdir -p ${xnatdicomdir}/$d"
+		echo ${cmd}
+		eval ${cmd}
+	fi
+	if [ ! -d "${xnatsurfdir}/$d" ];then
+		cmd="mkdir -p ${xnatsurfdir}/$d"
+		echo ${cmd}
+		eval ${cmd}
+	fi
+
+
+	#echo "rsync -rLptgD /mindhive/gablab/CARD/data/$d/dicoms ${xnatdir}/$d" | qsub -V -q bigmem
+	dicomdir="${datadir}/$d/dicoms"
+	echo ${dicomdir}
+	if [ ! -L ${dicomdir} ]; then
+		mv ${dicomdir} ${xnatdicomdir}/$d
+		ln -s "${xnatdicomdir}/$d/dicoms" "${dicomdir}"
+	fi
+	
+	for dir in surf mri label bem src "touch" scripts stats tmp trash; do
+
+
+		fsdir=${datadir}/$d/${dir}
+		echo ${fsdir}
+		if [ ! -L ${fsdir} ]; then
+			mv ${fsdir} ${xnatsurfdir}/$d
+			ln -s ${xnatsurfdir}/$d/${dir} ${fsdir}
+		fi
+
+	done
+	
+	
+
+done
+exit 1
+}
+
+if [ $# != 0 ]; then
+
+	for arg in "$@"
+	do
+		case "${arg}" in
+			-h|-help|help) 
+			helpme
+			;;
+			-datadir=*|-data=*)
+			darg=`echo ${arg} | sed 's/[-a-zA-Z0-9]*=//'`
+			echo "darg = "$darg
+			datadir=${darg}
+			;;
+			-studyname=*|-study=*)
+			sarg=`echo ${arg} | sed 's/[-a-zA-Z0-9]*=//'`
+			studyname=${sarg}
+			echo "sarg = "$sarg
+			;;
+			*)
+			echo "Error: Nonsense input, aborting"
+			exit 0
+			;;
+		esac
+	
+	
+		
+	done	
+	main	
+fi
+
+echo "Error: No arguments. Try again with -help"
+exit 0
+
+
+
+
+

@@ -1,0 +1,10 @@
+fprintf(1,'Executing %s at %s:\n',mfilename,datestr(now));
+ver,
+try,
+addpath('/software/spm8_4290');
+addpath '/mindhive/gablab/users/jsalva/scripts/GATES/';designmatrix('/mindhive/gablab/GATES/Analysis/WM/l1output_fldmap/306/model');designmatrix('/mindhive/gablab/GATES/Analysis/WM/l1output_fldmap/311/model');designmatrix('/mindhive/gablab/GATES/Analysis/WM/l1output_fldmap/314/model');designmatrix('/mindhive/gablab/GATES/Analysis/WM/l1output_fldmap/317/model');designmatrix('/mindhive/gablab/GATES/Analysis/WM/l1output_fldmap/312/model');designmatrix('/mindhive/gablab/GATES/Analysis/WM/l1output_fldmap/308/model');designmatrix('/mindhive/gablab/GATES/Analysis/WM/l1output_fldmap/313/model');designmatrix('/mindhive/gablab/GATES/Analysis/WM/l1output_fldmap/403/model');designmatrix('/mindhive/gablab/GATES/Analysis/WM/l1output_fldmap/310/model');designmatrix('/mindhive/gablab/GATES/Analysis/WM/l1output_fldmap/402/model');designmatrix('/mindhive/gablab/GATES/Analysis/WM/l1output_fldmap/404/model');designmatrix('/mindhive/gablab/GATES/Analysis/WM/l1output_fldmap/309/model');designmatrix('/mindhive/gablab/GATES/Analysis/WM/l1output_fldmap/401/model');designmatrix('/mindhive/gablab/GATES/Analysis/WM/l1output_fldmap/315/model');designmatrix('/mindhive/gablab/GATES/Analysis/WM/l1output_fldmap/307/model');designmatrix('/mindhive/gablab/GATES/Analysis/WM/l1output_fldmap/319/model');designmatrix('/mindhive/gablab/GATES/Analysis/WM/l1output_fldmap/318/model');designmatrix('/mindhive/gablab/GATES/Analysis/WM/l1output_fldmap/321/model');designmatrix('/mindhive/gablab/GATES/Analysis/WM/l1output_fldmap/406/model');designmatrix('/mindhive/gablab/GATES/Analysis/WM/l1output_fldmap/322/model');designmatrix('/mindhive/gablab/GATES/Analysis/WM/l1output_fldmap/323/model');designmatrix('/mindhive/gablab/GATES/Analysis/WM/l1output_fldmap/405/model');
+,catch ME,
+fprintf(2,'MATLAB code threw an exception:\n');
+fprintf(2,'%s\n',ME.message);
+if length(ME.stack) ~= 0, fprintf(2,'File:%s\nName:%s\nLine:%d\n',ME.stack.file,ME.stack.name,ME.stack.line);, end;
+end;
