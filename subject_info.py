@@ -5,9 +5,9 @@ subject_list=['302','303','304','305','306','307','308','309','310','311','312',
 '343','344','345','346','347','348','349','350','351','352','353','354','355','356',
 '357','358','359','360','361','362','363','364','365','366','367','368','369','370',
 '371','372','373','374','375','376','377','378','379','380','381','382','383','384',
-'385','386','387',
+'385','386','387','388','389','390','391','392','393',
 '400','401','402','403','404','405','406','407','408','409','410','411','412',
-'413','414','415',
+'413','414','415','416',
 '500','501','502','503','504','505']#'300','301', excluded because couldnt find data files
 
 info = {}
@@ -108,6 +108,12 @@ info['384']=[(['mprag2'],'struct'),(['WM1','WM2','WM3','WM4'],'WM'),(['Nback1','
 info['385']=[(['mprag2'],'struct'),(['WM1','WM2','WM3','WM4'],'WM'),(['Nback1','Nback2'],'Nback_letters'),(['fieldmap_func1'],'mag'),(['fieldmap_func2'],'phase')]
 info['386']=[(['mprag2'],'struct'),(['WM1','WM2','WM3','WM4'],'WM'),(['Nback1','Nback2'],'Nback_letters'),(['fieldmap_func1'],'mag'),(['fieldmap_func2'],'phase')]
 info['387']=[(['mprag2'],'struct'),(['WM1','WM2','WM3','WM4'],'WM'),(['Nback1','Nback2'],'Nback_letters'),(['fieldmap_func1'],'mag'),(['fieldmap_func2'],'phase')]
+info['388']=[(['mprag2'],'struct'),(['WM1','WM2','WM3','WM4'],'WM'),(['Nback1','Nback2'],'Nback_letters'),(['fieldmap_func1'],'mag'),(['fieldmap_func2'],'phase')]
+info['389']=[(['mprag2'],'struct'),(['WM1','WM2','WM3','WM4'],'WM'),(['Nback1','Nback2'],'Nback_letters'),(['fieldmap_func1'],'mag'),(['fieldmap_func2'],'phase')]
+info['390']=[(['mprag2'],'struct'),(['WM1','WM2','WM3','WM4'],'WM'),(['Nback1','Nback2'],'Nback_letters'),(['fieldmap_func1'],'mag'),(['fieldmap_func2'],'phase')]
+info['391']=[(['mprag2'],'struct'),(['WM1','WM2','WM3','WM4'],'WM'),(['Nback1','Nback2'],'Nback_letters'),(['fieldmap_func1'],'mag'),(['fieldmap_func2'],'phase')]
+info['392']=[(['mprag2'],'struct'),(['WM1','WM2','WM3','WM4'],'WM'),(['Nback1','Nback2'],'Nback_letters'),(['fieldmap_func1'],'mag'),(['fieldmap_func2'],'phase')]
+info['393']=[(['mprag2'],'struct'),(['WM1','WM2','WM3','WM4'],'WM'),(['Nback1','Nback2'],'Nback_letters'),(['fieldmap_func1'],'mag'),(['fieldmap_func2'],'phase')]
 info['400']=[(['mprag2'],'struct'),(['WM1','WM2','WM3','WM4'],'WM'),(['Nback1','Nback2'],'Nback_letters'),(['fieldmap_func1'],'mag'),(['fieldmap_func2'],'phase')]
 info['401']=[(['mprag2'],'struct'),(['WM1','WM2','WM3','WM4'],'WM'),(['Nback1','Nback2'],'Nback_letters'),(['fieldmap_func1'],'mag'),(['fieldmap_func2'],'phase')]
 info['402']=[(['mprag2'],'struct'),(['WM1','WM2','WM3','WM4'],'WM'),(['Nback1','Nback2'],'Nback_letters'),(['fieldmap_func1'],'mag'),(['fieldmap_func2'],'phase')]
@@ -125,6 +131,7 @@ info['413']=[(['mprag2'],'struct'),(['WM1','WM2','WM3','WM4'],'WM'),(['Nback1','
 #414 WMrun1 motion outlier
 info['414']=[(['mprag2'],'struct'),(['WM2','WM3','WM4'],'WM'),(['Nback1','Nback2'],'Nback_letters'),(['fieldmap_func1'],'mag'),(['fieldmap_func2'],'phase')]
 info['415']=[(['mprag2'],'struct'),(['WM1','WM2','WM3','WM4'],'WM'),(['Nback1','Nback2'],'Nback_letters'),(['fieldmap_func1'],'mag'),(['fieldmap_func2'],'phase')]
+info['416']=[(['mprag2'],'struct'),(['WM1','WM2','WM3','WM4'],'WM'),(['Nback1','Nback2'],'Nback_letters'),(['fieldmap_func1'],'mag'),(['fieldmap_func2'],'phase')]
 info['500']=[(['mprag2'],'struct'),(['WM1','WM2','WM3','WM4'],'WM'),(['Nback1','Nback2'],'Nback_letters'),(['fieldmap_func1'],'mag'),(['fieldmap_func2'],'phase')]
 info['501']=[(['mprag2'],'struct'),(['WM2','WM3'],'WM'),(['Nback1','Nback2'],'Nback_letters'),(['fieldmap_func1'],'mag'),(['fieldmap_func2'],'phase')]
 info['502']=[(['mprag2'],'struct'),(['WM1','WM2','WM3','WM4'],'WM'),([''],'Nback_letters'),(['fieldmap_func1'],'mag'),(['fieldmap_func2'],'phase')]

@@ -26,7 +26,7 @@ config.set('execution','remove_unnecessary_outputs','false')
 
 
 def gen_peak_mask(anat_mask,func_activation):
-    import nibabel as nb
+    import nibabel as nb 
     import numpy as np
     from fir_utils import (binarize_peak, dilate_mask)
     import sys
@@ -188,6 +188,9 @@ def model_fir_from_onsets(subject_id, modeled_event_name,timeseries_files, onset
         except IOError:
             print "no timepoints found!"
             outlier_timepoints = np.array([])
+
+        #one thing to check will be whether the motion parameter files are absolute in the sense that they are rigid body transforms from volume 1,
+        #or whether they are differentiated w/ respect to the previous volume
         motion_parameters = np.genfromtxt(motion_param_files[run])
         mat = loadmat(onsets_files[run])
         
@@ -231,6 +234,8 @@ def model_fir_from_onsets(subject_id, modeled_event_name,timeseries_files, onset
 
                 if pmods[col_idx].any():
                     tmp_param_col = np.zeros(len(timeseries)*time_bins_per_scan)
+                    #using the name "load" is specific to our Working Memory paradigm. In the more general case, one should use a name that makes sense for whatever is being parametrically
+                    #modulated. 
                     tmp_nam.append(event_name[0]+'xload^1')
                 
                 for ons_idx,onset in enumerate(ons[col_idx][0]):
@@ -240,9 +245,10 @@ def model_fir_from_onsets(subject_id, modeled_event_name,timeseries_files, onset
 
                 for col_name in tmp_nam:
                     run_names.append(col_name+'_run%d'%(run))
-
+                #using "Same" may introduce boundary effects for convolution. Perhaps we should guarantee the convolution is only defined for complete overlaps and fill in boundaries with zeros?
                 tmp_design[run] = np.column_stack([tmp_design[run],np.convolve(tmp_col,normalized_hrf,'same')])
                 if not tmp_param_col is None:
+                    #Not sure whether parametric modulators should be concolved. Probably not! They should modulate the associated block of bold uniformly across the duraiton of the HRF, no?
                     tmp_design[run] = np.column_stack([tmp_design[run],np.convolve(tmp_param_col,normalized_hrf,'same')])
 
         #done with "modeled" events; move on to movement, outliers, and lagrange

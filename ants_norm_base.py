@@ -1,5 +1,6 @@
 import nipype.interfaces.freesurfer as fs
 import nipype.interfaces.ants as ants
+import nipype.interfaces.ants.legacy as ants_legacy
 import nipype.pipeline.engine as pe
 import nipype.interfaces.utility as util
 from ants_norm_utils import (convert_affine, get_image_dimensions)
@@ -30,6 +31,7 @@ def get_struct_norm_workflow(name='normalize_struct'):
     -------
     workflow : structural normalization workflow
     """
+    print ants.__path__
     #inputs to workflow
     inputspec = pe.Node(
         util.IdentityInterface(
@@ -64,7 +66,7 @@ def get_struct_norm_workflow(name='normalize_struct'):
 
     #use ANTS to warp the masked anatomical image to a template image
     warp_brain = pe.Node(
-        ants.GenWarpFields(),
+        ants_legacy.GenWarpFields(),
         name='warp_brain')
 
     #collects workflow outputs
@@ -107,7 +109,7 @@ def get_post_struct_norm_workflow(name='normalize_post_struct'):
     inputspec.warp_field :
     inputspec.affine_transformation :
     inputspec.out_fsl_file :
-    inputspec.moving_image :
+    inputspec.input_image :
     inputspec.mean_func :
 
     Outputs
@@ -122,7 +124,7 @@ def get_post_struct_norm_workflow(name='normalize_post_struct'):
     inputspec = pe.Node(
         util.IdentityInterface(
             fields=['template_file', 'unwarped_brain', 'warp_field',
-                'affine_transformation', 'out_fsl_file', 'moving_image',
+                'affine_transformation', 'out_fsl_file', 'input_image',
                 'mean_func']),
         name='inputspec')
 
@@ -143,7 +145,7 @@ def get_post_struct_norm_workflow(name='normalize_post_struct'):
     warp_images = pe.MapNode(
         ants.WarpTimeSeriesImageMultiTransform(),
         name='warp_images',
-        iterfield=['moving_image', 'dimension'])
+        iterfield=['input_image', 'dimension'])
 
     #collects workflow outputs
     outputspec = pe.Node(
@@ -160,8 +162,8 @@ def get_post_struct_norm_workflow(name='normalize_post_struct'):
         (fsl_reg_2_itk, collect_transforms, [('fsl2antsAffine', 'in3')]),
         (inputspec, collect_transforms, [('warp_field', 'in1'),
             ('affine_transformation', 'in2')]),
-        (inputspec, warp_images, [('moving_image', 'moving_image')]),
-        (inputspec, warp_images, [(('moving_image', get_image_dimensions),
+        (inputspec, warp_images, [('input_image', 'input_image')]),
+        (inputspec, warp_images, [(('input_image', get_image_dimensions),
                                     'dimension')]),
         (inputspec, warp_images, [('template_file', 'reference_image')]),
         (collect_transforms, warp_images, [('out',
@@ -184,12 +186,12 @@ def get_full_norm_workflow(name="normalize_struct_and_post"):
     inputspec.brain :
     inputspec.segmentation :
     inputspec.out_fsl_file :
-    inputspec.moving_image :
+    inputspec.input_image :
     inputspec.mean_func :
 
     Outputs
     -------
-    outputspec.warped_image : normalized moving_image image
+    outputspec.warped_image : normalized input_image image
     outputspec.warp_field :
     outputspec.affine_transformation :
     outputspec.inverse_warp :
@@ -206,7 +208,7 @@ def get_full_norm_workflow(name="normalize_struct_and_post"):
     inputspec = pe.Node(
         util.IdentityInterface(
             fields=['template_file', 'brain', 'segmentation', 'out_fsl_file',
-                'moving_image', 'mean_func']),
+                'input_image', 'mean_func']),
         name='inputspec')
 
     outputspec = pe.Node(
@@ -234,8 +236,8 @@ def get_full_norm_workflow(name="normalize_struct_and_post"):
                                         'inputspec.unwarped_brain')]),
         (inputspec, normalize_post_struct, [('out_fsl_file',
                                         'inputspec.out_fsl_file')]),
-        (inputspec, normalize_post_struct, [('moving_image',
-                                        'inputspec.moving_image')]),
+        (inputspec, normalize_post_struct, [('input_image',
+                                        'inputspec.input_image')]),
         (inputspec, normalize_post_struct, [('mean_func',
                                         'inputspec.mean_func')]),
         (normalize_struct, outputspec, [('outputspec.warp_field',
