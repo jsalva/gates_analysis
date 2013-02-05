@@ -173,6 +173,7 @@ def model_fir_from_onsets(subject_id, modeled_event_name,timeseries_files, onset
 
     
     tmp_design = []
+    downsampled_tmp_design = []
     names = []
     tmp_signal = []
     for run in range(num_runs):        
@@ -180,7 +181,7 @@ def model_fir_from_onsets(subject_id, modeled_event_name,timeseries_files, onset
         timeseries = np.genfromtxt(timeseries_files[run])
         
         tmp_signal.append(np.array([]))
-        interp_timeseries = interp1d(np.arange(0,len(timeseries)*repitition_time,2),timeseries,kind='linear',axis=0,bounds_error=False,fill_value=0)
+        interp_timeseries = interp1d(np.arange(0,len(timeseries)*repitition_time,2),timeseries,axis=0,kind='linear',bounds_error=False,fill_value=np.nan)
         tmp_signal[run] = interp_timeseries(np.arange(0,len(timeseries)*repitition_time,dt))        
 
         try:
@@ -201,6 +202,7 @@ def model_fir_from_onsets(subject_id, modeled_event_name,timeseries_files, onset
 
 
         tmp_design.append(np.array([]))
+        downsampled_tmp_design.append(np.array([]))
         run_names = ['intercept_run%d'%(run)]
         
         tmp_design[run] = np.ones(len(timeseries)*time_bins_per_scan)
@@ -248,33 +250,30 @@ def model_fir_from_onsets(subject_id, modeled_event_name,timeseries_files, onset
                 #using "Same" may introduce boundary effects for convolution. Perhaps we should guarantee the convolution is only defined for complete overlaps and fill in boundaries with zeros?
                 tmp_design[run] = np.column_stack([tmp_design[run],np.convolve(tmp_col,normalized_hrf,'same')])
                 if not tmp_param_col is None:
-                    #Not sure whether parametric modulators should be concolved. Probably not! They should modulate the associated block of bold uniformly across the duraiton of the HRF, no?
                     tmp_design[run] = np.column_stack([tmp_design[run],np.convolve(tmp_param_col,normalized_hrf,'same')])
+
+        #bring the design back to a downsampled state
+        downsample_design = interp1d(np.arange(0,len(timeseries)*repitition_time,dt),tmp_design[run],kind='linear',axis=0,bounds_error=False,fill_value=np.nan)
+        downsampled_tmp_design[run] = downsample_design(np.arange(0,len(timeseries)*repitition_time,2))
 
         #done with "modeled" events; move on to movement, outliers, and lagrange
         for realign_param in ["x_trans","y_trans","z_trans","pitch","roll","yaw"]:
             run_names.append('realign_%s_run%d'%(realign_param,run))
-        interp_motion_func = interp1d(np.arange(0,len(timeseries)*repitition_time,2),motion_parameters,kind='linear',axis=0,bounds_error=False,fill_value=0)
-        tmp_design[run] = np.column_stack([tmp_design[run],interp_motion_func(np.arange(0,len(timeseries)*repitition_time,dt))])
+            downsampled_tmp_design[run] = np.column_stack([downsampled_tmp_design[run],motion_parameters])
 
-        if outlier_timepoints.size>1:
+        if outlier_timepoints.size>0:
             for outlier_idx, outlier_event in enumerate(outlier_timepoints):
                 run_names.append('art_outlier%d_run%d'%(outlier_idx,run))
-                tmp_col = np.zeros(len(timeseries)*time_bins_per_scan)
-                tmp_col[int(np.round(outlier_event/dt)):int(np.round((outlier_event+1)/dt))-1] = 1
-                tmp_design[run] = np.column_stack([tmp_design[run],tmp_col])
-        elif outlier_timepoints.size == 1:
-            run_names.append('art_outlier%d_run%d'%(1,run))
-            tmp_col = np.zeros(len(timeseries)*time_bins_per_scan)
-            tmp_col[int(np.round(outlier_timepoints/dt)):int(np.round((outlier_timepoints+1)/dt))] = 1
-            tmp_design[run] = np.column_stack([tmp_design[run],tmp_col])
+                tmp_col = np.zeros(downsampled_tmp_design[run].shape[0])
+                tmp_col[int(outlier_event)] = 1
+                downsampled_tmp_design[run] = np.column_stack([downsampled_tmp_design[run],tmp_col])
 
         for exp in range(5)[1:]:
             coeffs = np.zeros(exp).tolist()
             coeffs.append(1)
             poly = np.polynomial.legendre.Legendre(coeffs)
-            tmp_col = poly.linspace(len(timeseries)*time_bins_per_scan)[1]
-            tmp_design[run] = np.column_stack([tmp_design[run],tmp_col])
+            tmp_col = poly.linspace(downsampled_tmp_design[run].shape[0])[1]
+            downsampled_tmp_design[run] = np.column_stack([downsampled_tmp_design[run],tmp_col])
             run_names.append('legendre^%d_run%d'%(exp,run))
         
         for name in run_names:
@@ -283,7 +282,7 @@ def model_fir_from_onsets(subject_id, modeled_event_name,timeseries_files, onset
     rows = 0
     columns = 0
     timeseries_length = 0
-    for run_index,run_design in enumerate(tmp_design):
+    for run_index,run_design in enumerate(downsampled_tmp_design):
         print "design for run %d has (%d,%d) shape"%(run_index,run_design.shape[0],run_design.shape[1])
         rows+=run_design.shape[0]
         columns+=run_design.shape[1]
@@ -296,7 +295,7 @@ def model_fir_from_onsets(subject_id, modeled_event_name,timeseries_files, onset
     design_matrix = np.zeros((rows,columns))
     signal_timeseries = np.zeros(timeseries_length)
     print design_matrix.shape
-    for run_index,run_design in enumerate(tmp_design):
+    for run_index,run_design in enumerate(downsampled_tmp_design):
         print "made it to design for run %d"%(run_index)
         design_matrix[curr_row:curr_row+run_design.shape[0],curr_col:curr_col+run_design.shape[1]] = run_design
         signal_timeseries[curr_row:curr_row+len(tmp_signal[run_index])] = tmp_signal[run_index]
@@ -327,11 +326,9 @@ def model_fir_from_onsets(subject_id, modeled_event_name,timeseries_files, onset
     np.savetxt(hrf_matrix_path,hrf_matrix)
 
     hrf = np.average(hrf_matrix,axis = 0)
-    interp_hrf = interp1d(np.arange(-2*repitition_time,10*repitition_time,dt),hrf,kind='linear',axis=0,bounds_error=False,fill_value=hrf[-1])
-    downsampled_hrf = interp_hrf(np.arange(-2*repitition_time,10*repitition_time,1))
     #U,E,V = np.linalg.svd(hrf); consider using SVD/PCA to get HRF?
     fir_hrf_path = '%s/fir_avg_hrf.txt'%(os.path.abspath(os.path.curdir))
-    np.savetxt(fir_hrf_path,downsampled_hrf)
+    np.savetxt(fir_hrf_path,hrf)
 
     return fir_hrf_path, hrf_matrix_path, design_path, names_path, betas_path
     
@@ -405,7 +402,7 @@ native2func.inputs.use_nearest = True
 native2func.inputs.reslice_by_header = True
 
 
-func_aseg.connect( [(aparcaseg_2nii, native2func, [( 'out_file' , 'moving_image' )] )] )
+func_aseg.connect( [(aparcaseg_2nii, native2func, [( 'out_file' , 'input_image' )] )] )
 func_aseg.connect( [(datasource, native2func, [( 'meanfunc' , 'reference_image' )] )] )
 func_aseg.connect( [(fsl_reg_2_itk, native2func, [( 'fsl2antsAffine' , 'transformation_series' )] )] )
 
@@ -531,7 +528,7 @@ for seg_val in segmentation_regions:
     fir_workflow.connect( [( fir_model, fir_datasink, [( 'betas' , 'fir_model.@betas' )] )] )
 
 
-    fir_workflow.run(plugin = 'MultiProc', plugin_args = {'n_procs' : 30})
+    fir_workflow.run(plugin = 'MultiProc', plugin_args = {'n_procs' : 5})
 
 
 
