@@ -133,10 +133,12 @@ def model_fir_from_onsets(subject_id, modeled_event_name,timeseries_files, onset
     import re
 
     #defaults taken from SPM's spm_hrf.m
-    repitition_time = 2.0
+    START_TR = -1
+    END_TR = 6
+    TR = 2.0
     hrf_duration = 32.0
     time_bins_per_scan = 16.0
-    dt = repitition_time/time_bins_per_scan
+    dt = TR/time_bins_per_scan
 
     
     hrf_domain = np.arange(0,hrf_duration,dt)
@@ -173,7 +175,6 @@ def model_fir_from_onsets(subject_id, modeled_event_name,timeseries_files, onset
 
     
     tmp_design = []
-    downsampled_tmp_design = []
     names = []
     tmp_signal = []
     for run in range(num_runs):        
@@ -181,11 +182,12 @@ def model_fir_from_onsets(subject_id, modeled_event_name,timeseries_files, onset
         timeseries = np.genfromtxt(timeseries_files[run])
         
         tmp_signal.append(np.array([]))
-        interp_timeseries = interp1d(np.arange(0,len(timeseries)*repitition_time,2),timeseries,axis=0,kind='linear',bounds_error=False,fill_value=np.nan)
-        tmp_signal[run] = interp_timeseries(np.arange(0,len(timeseries)*repitition_time,dt))        
+        tmp_signal[run] = timeseries        
 
         try:
             outlier_timepoints = np.genfromtxt(art_outlier_files[run])
+            if outlier_timepoints.size == 1:
+                outlier_timepoints = np.array([outlier_timepoints])
         except IOError:
             print "no timepoints found!"
             outlier_timepoints = np.array([])
@@ -201,11 +203,11 @@ def model_fir_from_onsets(subject_id, modeled_event_name,timeseries_files, onset
         pmods = mat['pmod'][0]
 
 
+
         tmp_design.append(np.array([]))
-        downsampled_tmp_design.append(np.array([]))
         run_names = ['intercept_run%d'%(run)]
         
-        tmp_design[run] = np.ones(len(timeseries)*time_bins_per_scan)
+        tmp_design[run] = np.ones(len(timeseries))
 
         for col_idx,event_name in enumerate(nam):
             tmp_col = None
@@ -214,15 +216,14 @@ def model_fir_from_onsets(subject_id, modeled_event_name,timeseries_files, onset
 
             if event_name[0] == modeled_event_name:
 
-                tmp_col = np.zeros(len(timeseries)*time_bins_per_scan)
-
+                tmp_col = np.zeros(len(timeseries))
                 for ons_idx,onset in enumerate(ons[col_idx][0]):
-                    tmp_col[int(np.round((onset-2*repitition_time)/dt))] = 1
-
+                    tmp_col[int(np.round(onset/TR)) + START_TR] = 1
                     
-                num_shifts = len(np.arange(-2*repitition_time,10*repitition_time,dt))
+                    
+                num_shifts = len(np.arange(START_TR,END_TR))
                 tmp_nam = []
-                for fir_idx,time in enumerate(np.arange(-2*repitition_time,10*repitition_time,dt)):
+                for fir_idx,time in enumerate(np.arange(START_TR,END_TR)):
                     tmp_nam.append(event_name[0]+'_fir_%d@%.2fs'%(fir_idx,time))
                 tmp_design[run] = np.column_stack([tmp_design[run],toeplitz(tmp_col,np.zeros(num_shifts))])
 
@@ -232,12 +233,11 @@ def model_fir_from_onsets(subject_id, modeled_event_name,timeseries_files, onset
 
             else:            
                 tmp_col = np.zeros(len(timeseries)*time_bins_per_scan)
+                tmp_hires_convolved_column = None
                 tmp_nam = [event_name[0]]
 
                 if pmods[col_idx].any():
                     tmp_param_col = np.zeros(len(timeseries)*time_bins_per_scan)
-                    #using the name "load" is specific to our Working Memory paradigm. In the more general case, one should use a name that makes sense for whatever is being parametrically
-                    #modulated. 
                     tmp_nam.append(event_name[0]+'xload^1')
                 
                 for ons_idx,onset in enumerate(ons[col_idx][0]):
@@ -247,33 +247,41 @@ def model_fir_from_onsets(subject_id, modeled_event_name,timeseries_files, onset
 
                 for col_name in tmp_nam:
                     run_names.append(col_name+'_run%d'%(run))
-                #using "Same" may introduce boundary effects for convolution. Perhaps we should guarantee the convolution is only defined for complete overlaps and fill in boundaries with zeros?
-                tmp_design[run] = np.column_stack([tmp_design[run],np.convolve(tmp_col,normalized_hrf,'same')])
-                if not tmp_param_col is None:
-                    tmp_design[run] = np.column_stack([tmp_design[run],np.convolve(tmp_param_col,normalized_hrf,'same')])
 
-        #bring the design back to a downsampled state
-        downsample_design = interp1d(np.arange(0,len(timeseries)*repitition_time,dt),tmp_design[run],kind='linear',axis=0,bounds_error=False,fill_value=np.nan)
-        downsampled_tmp_design[run] = downsample_design(np.arange(0,len(timeseries)*repitition_time,2))
+                tmp_hires_convolved_column = np.convolve(tmp_col,normalized_hrf,'same')
+                downsample_column = interp1d(np.arange(0,len(timeseries)*TR,dt),tmp_hires_convolved_column,kind='linear',axis=0,bounds_error=False,fill_value=np.nan)
+                downsampled_column = downsample_column(np.arange(0,len(timeseries)*TR,TR))
+                print tmp_design[run].shape
+                print downsampled_column.shape
+                tmp_design[run] = np.column_stack([tmp_design[run],downsampled_column])
+                
+                if not tmp_param_col is None:
+                    tmp_hires_convolved_column = np.convolve(tmp_param_col,normalized_hrf,'same')
+                    downsample_column = interp1d(np.arange(0,len(timeseries)*TR,dt),tmp_hires_convolved_column,kind='linear',axis=0,bounds_error=False,fill_value=np.nan)
+                    downsampled_column = downsample_column(np.arange(0,len(timeseries)*TR,TR))
+                    tmp_design[run] = np.column_stack([tmp_design[run],downsampled_column])
+
 
         #done with "modeled" events; move on to movement, outliers, and lagrange
         for realign_param in ["x_trans","y_trans","z_trans","pitch","roll","yaw"]:
             run_names.append('realign_%s_run%d'%(realign_param,run))
-            downsampled_tmp_design[run] = np.column_stack([downsampled_tmp_design[run],motion_parameters])
+        tmp_design[run] = np.column_stack([tmp_design[run],motion_parameters])
 
+        print outlier_timepoints
+        print outlier_timepoints.shape
         if outlier_timepoints.size>0:
             for outlier_idx, outlier_event in enumerate(outlier_timepoints):
                 run_names.append('art_outlier%d_run%d'%(outlier_idx,run))
-                tmp_col = np.zeros(downsampled_tmp_design[run].shape[0])
+                tmp_col = np.zeros(tmp_design[run].shape[0])
                 tmp_col[int(outlier_event)] = 1
-                downsampled_tmp_design[run] = np.column_stack([downsampled_tmp_design[run],tmp_col])
+                tmp_design[run] = np.column_stack([tmp_design[run],tmp_col])
 
         for exp in range(5)[1:]:
             coeffs = np.zeros(exp).tolist()
             coeffs.append(1)
             poly = np.polynomial.legendre.Legendre(coeffs)
-            tmp_col = poly.linspace(downsampled_tmp_design[run].shape[0])[1]
-            downsampled_tmp_design[run] = np.column_stack([downsampled_tmp_design[run],tmp_col])
+            tmp_col = poly.linspace(tmp_design[run].shape[0])[1]
+            tmp_design[run] = np.column_stack([tmp_design[run],tmp_col])
             run_names.append('legendre^%d_run%d'%(exp,run))
         
         for name in run_names:
@@ -282,7 +290,7 @@ def model_fir_from_onsets(subject_id, modeled_event_name,timeseries_files, onset
     rows = 0
     columns = 0
     timeseries_length = 0
-    for run_index,run_design in enumerate(downsampled_tmp_design):
+    for run_index,run_design in enumerate(tmp_design):
         print "design for run %d has (%d,%d) shape"%(run_index,run_design.shape[0],run_design.shape[1])
         rows+=run_design.shape[0]
         columns+=run_design.shape[1]
@@ -295,13 +303,14 @@ def model_fir_from_onsets(subject_id, modeled_event_name,timeseries_files, onset
     design_matrix = np.zeros((rows,columns))
     signal_timeseries = np.zeros(timeseries_length)
     print design_matrix.shape
-    for run_index,run_design in enumerate(downsampled_tmp_design):
+    for run_index,run_design in enumerate(tmp_design):
         print "made it to design for run %d"%(run_index)
         design_matrix[curr_row:curr_row+run_design.shape[0],curr_col:curr_col+run_design.shape[1]] = run_design
         signal_timeseries[curr_row:curr_row+len(tmp_signal[run_index])] = tmp_signal[run_index]
         curr_row += run_design.shape[0]
         curr_col += run_design.shape[1]
-
+    print design_matrix.shape
+    print signal_timeseries.shape
     design_path = '%s/design.txt'%(os.path.abspath(os.path.curdir))
     np.savetxt(design_path,design_matrix)
 
@@ -350,7 +359,6 @@ datasource = pe.Node(interface=nio.DataGrabber(
     name = 'datasource')
 datasource.inputs.base_directory = '/mindhive/gablab/GATES/'
 datasource.inputs.template = '*'
-#MAKE ABSOLUTELY SURE THESE COME OUT SORTED.
 datasource.inputs.field_template = dict(
     meanfunc = 'Analysis/MCNAB/l1_mcnab/%s/subj_anat/rWM*.nii',
     aparc_aseg = 'data/%s/mri/aparc+aseg.mgz',
@@ -413,7 +421,10 @@ preproc_sink.inputs.base_directory = '/mindhive/gablab/GATES/Analysis/WM_func_ap
 
 func_aseg.connect( [(native2func, preproc_sink, [( 'output_image' , 'func_seg_file' )] )] )
 
-func_aseg.run(plugin = 'MultiProc', plugin_args = {'n_procs' : 30})
+try:
+    func_aseg.run(plugin = 'MultiProc', plugin_args = {'n_procs' : 5})
+except:
+    print "Crash:"
 
 
 segmentation_regions = [11,12,13,50,51,52]
