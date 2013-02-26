@@ -21,6 +21,7 @@ from copy import deepcopy
 import sys
 from nipype import config
 from compcor_workflow import (create_compcorr,extract_noise_components)
+from subject_info import *
 
 config.set('execution','keep_inputs','true')
 config.set('execution','remove_unnecessary_outputs','false')
@@ -62,7 +63,7 @@ os.environ["SUBJECTS_DIR"] = subjects_dir
 fs.FSCommand.set_default_subjects_dir(subjects_dir)
 
 #Test on subject that has been unpacked and reconned for WMSTAT
-
+"""
 subject_list=['300','301','302','303','304','305','306','307','308','309','310','311','312',
 '313','314','315','316','317','318','319','320','321','322','323','325','326','327',
 '328','329','330','332','333','334','335','336','337','339','340','341','342',
@@ -73,7 +74,7 @@ subject_list=['300','301','302','303','304','305','306','307','308','309','310',
 '401','402','403','404','405','406','407','408','409','410','411','412',
 '413','414','415','416',
 '500','501','502','503','504','505','b500_2','b501_2','b502_2','b503_2']
-
+"""
 #Missing onsets:'325','326','327','328'
 
 # Set the way matlab should be called
@@ -84,6 +85,7 @@ mlab.MatlabCommand.set_default_paths('/software/spm8_4290')
 fsl.FSLCommand.set_default_output_type('NIFTI')
 
 na=0
+"""
 info = {}
 #Dict containing all subject scan info
 
@@ -214,7 +216,7 @@ info['b501_2']=[(['mprag2'],'struct'),(['WM2','WM3'],'WM'),([''],'Nback_letters'
 info['b502_2']=[(['mprag2'],'struct'),(['WM1','WM2','WM3','WM4'],'WM'),([''],'Nback_letters'),(['fieldmap_func1'],'mag'),(['fieldmap_func2'],'phase')]
 info['b503_2']=[(['mprag2'],'struct'),(['WM1','WM2','WM3','WM4'],'WM'),([''],'Nback_letters'),(['fieldmap_func1'],'mag'),(['fieldmap_func2'],'phase')]
 #ADD MORE PARTICIPANTS
-
+"""
 # Infosource Node (get subject specific run information)
 infosource = pe.Node(interface=util.IdentityInterface(fields=['subject_id']), name="infosource")
 infosource.iterables = ('subject_id', subject_list)
@@ -793,7 +795,7 @@ l1pipeline.connect([
                     (level1design,stimcor,[('spm_mat_file','spm_mat_file')]),
                     # Coregister the output files:
                     (contrastestimate,makeImgNiiCon,[('con_images','in_file')]),
-                    (makeImgNiiCon,normflow,[('out_file','inputspec.moving_image')]),
+                    (makeImgNiiCon,normflow,[('out_file','inputspec.input_image')]),
                     (makeImgNiiCon,applySurfRegCon,[('out_file','source_file')]),
                     (calcSurfReg,applySurfRegCon,[('out_reg_file','reg_file'),
                                                 ('registered_file','target_file')]),
