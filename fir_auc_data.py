@@ -1,0 +1,64 @@
+import nipype.pipeline.engine as pe
+import nipype.interfaces.utility as util
+import nipype.interfaces.io as nio
+from subject_info import *
+import os
+import time
+
+def area_under_curve(hrf_files,subject_list,outfile):
+    import numpy as np
+    from scipy import integrate
+    import csv
+    import os
+
+    auc_file = os.path.abspath('./%s.csv'%(outfile))
+    c = csv.writer(open(auc_file,'wb'))
+    c.writerow(['subject','auc'])
+
+    for subject in sorted(subject_list):
+        files = [file for file in hrf_files if file.rfind(subject) != -1]
+        for file in files:
+            hrf = np.genfromtxt(file)    
+            median_hrf = np.median(hrf,axis=0)
+            time = np.arange(0,len(median_hrf)*2,2)
+            auc = integrate.trapz(time,median_hrf)
+            c.writerow(['%s'%(subject),'%0.4f'%(auc)])
+
+    print auc_file
+    return auc_file
+
+
+            
+
+for hemi in ['lh','rh']:
+    for region in ['caudate','pallidum','putamen']:
+        simple_auc = pe.Workflow(name = '%s_%s_area_under_curve'%(hemi,region))
+        simple_auc.base_dir = os.path.abspath('/gablab/p/scratch/%s/jsalva/auc/'%(time.strftime('%A')[0:3]))
+
+        datagrabber = pe.Node(nio.DataGrabber(
+            infields = None,
+            outfields = ['hrf_by_run']),
+            name = 'data_in')
+        datagrabber.inputs.base_directory = '/gablab/p/GATES/Analysis/MCNAB_FIR/%s_%s/'%(hemi,region)
+        datagrabber.inputs.template = 'fir_model/*/_fir_model0/hrf_by_run.txt'
+        #datagrabber.inputs.subject_id = subject_list
+
+        calc_auc = pe.Node(util.Function(
+            input_names = ['hrf_files','subject_list','outfile'],
+            output_names = ['auc_file'],
+            function = area_under_curve),
+            name = 'calc_auc')
+        calc_auc.inputs.subject_list = subject_list
+        calc_auc.inputs.outfile = '%s_%s'%(hemi,region)
+
+        simple_auc.connect([(datagrabber,calc_auc,[('hrf_by_run','hrf_files')])])
+
+        datasink = pe.Node(nio.DataSink(), name="data_out")
+        datasink.inputs.base_directory = '/mindhive/gablab/GATES/Analysis/fir_auc/%s_%s/'%(hemi,region)
+        datasink.inputs.substitutions = [('_subject_id_%s/'%(subject_id),'%s/'%(subject_id)) for subject_id in subject_list]
+        
+        simple_auc.connect([(calc_auc,datasink,[('auc_file','area_under_curve')])])
+
+        simple_auc.run(plugin = 'MultiProc', plugin_args = {'n_procs' : 5})
+
+

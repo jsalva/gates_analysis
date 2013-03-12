@@ -67,7 +67,6 @@ for roi in glob(os.path.join(base_dir,'*')):
 
         xlabel("TR")
         ylabel("B Val")
-        ylim([-1,1])
         
         title("%s %s"%(roi_name,contrast))
         legend()

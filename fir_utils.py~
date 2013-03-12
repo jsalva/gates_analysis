@@ -1,0 +1,61 @@
+def maximum_idx(array):
+    """finds the index of the center-of-mass"""
+    import numpy as np
+    import sys
+
+    if not isinstance(array,np.ndarray):
+        array = np.array(array)
+
+    return np.unravel_index( array.argmax(axis=None), array.shape)
+
+def functional_binarize(array,bool_func):
+    """binarizes the array by settting values that bool_func 
+    returns true to 1. Bool func must accept array as its first 
+    input"""
+    import numpy as np
+
+    binarized_array = np.zeros(array.shape)
+
+    binarized_array[bool_func(array)] = 1
+
+    return binarized_array
+
+def is_binary(array):
+    import numpy as np
+    return (np.unique(array) == np.array([0,1])).all()
+
+def binarize_peak(array):
+    """ finds the peak value and binarizes it"""
+    import numpy as np
+    
+    return functional_binarize(np.array(array),lambda a: a == a[maximum_idx(a)])
+
+def dilate_mask(mask, iterations=1):
+    """dilates the mask iterations number of times"""
+    from scipy.ndimage.morphology import binary_dilation
+    import sys
+
+    if not is_binary(mask):
+        sys.exit("MASK TO BE DILATED WAS NOT A BINARY MASK")
+
+    mask[binary_dilation(mask,iterations=iterations)] = 1
+    return mask
+
+def convert_affine(unwarped_brain, mean_func, out_fsl_file):
+    """Converts fsl-style Affine registration into ANTS compatible itk format
+
+    Parameters
+    ----------
+    unwarped_brain : structural reference image
+    mean_func : image that was coregistered
+    out_fsl_file : fsl-style coregistration matrix
+
+    Returns
+    -------
+    file : returns the filename corresponding to the converted registration
+    """
+    import os
+    cmd = "c3d_affine_tool -ref %s -src %s %s -fsl2ras \
+-oitk fsl2antsAffine.txt" % (unwarped_brain, mean_func, out_fsl_file)
+    os.system(cmd)
+    return os.path.abspath('fsl2antsAffine.txt')

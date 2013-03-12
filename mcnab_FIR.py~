@@ -11,7 +11,6 @@ import nipype.interfaces.freesurfer as fs
 import nipype.interfaces.utility as util
 from nipype import config
 from subject_info import *
-import time
 import os
 from fir_utils import *
 study_dir = os.path.abspath('/mindhive/gablab/GATES/Analysis/MCNAB/')
